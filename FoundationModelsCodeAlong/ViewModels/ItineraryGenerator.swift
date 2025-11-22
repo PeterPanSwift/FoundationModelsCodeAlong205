@@ -13,23 +13,20 @@ final class ItineraryGenerator {
     
     private(set) var itinerary: Itinerary.PartiallyGenerated?
     
-    // MARK: - [CODE-ALONG] Chapter 5.3.1: Add a property to hold the tool
-    
-    
     init(landmark: Landmark) {
         self.landmark = landmark
+        let pointOfInterestTool = FindPointsOfInterestTool(landmark: landmark)
         let instructions = Instructions {
             "Your job is to create an itinerary for the user."
             "For each day, you must suggest one hotel and one restaurant."
+            "Always use the 'findPointsOfInterest' tool to find hotels and restaurant in \(landmark.name)"
         }
-        self.session = LanguageModelSession(instructions: instructions)
         
-        
-        // MARK: - [CODE-ALONG] Chapter 5.3.2: Initialize LanguageModelSession with Tool
-        
+        self.session = LanguageModelSession(tools: [pointOfInterestTool], instructions: instructions)
     }
     
     func generateItinerary(dayCount: Int = 3) async {
+        // MARK: - [CODE-ALONG] Chapter 6.2.1: Update to exclude schema from prompt
         do {
             let prompt = Prompt {
                 "Generate a \(dayCount)-day itinerary to \(landmark.name)."
@@ -38,17 +35,15 @@ final class ItineraryGenerator {
                 Itinerary.exampleTripToJapan
             }
             let stream = session.streamResponse(to: prompt,
-                                                generating: Itinerary.self)
+                                                generating: Itinerary.self,
+                                                options: GenerationOptions(sampling: .greedy))
             for try await partialResponse in stream {
                 self.itinerary = partialResponse.content
             }
+            
         } catch {
             self.error = error
         }
-        // MARK: - [CODE-ALONG] Chapter 5.3.1: Update the instructions to use the Tool
-        // MARK: - [CODE-ALONG] Chapter 5.3.2: Update the LanguageModelSession with the tool
-        // MARK: - [CODE-ALONG] Chapter 6.2.1: Update to exclude schema in prompt
-        
     }
     
     func prewarmModel() {
